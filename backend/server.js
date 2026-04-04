@@ -93,8 +93,8 @@ app.delete('/delete-task/:id', async (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 // Only run app.listen if we are NOT on Vercel
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
 
+    app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
 module.exports = app;
+    })
