@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// --- ADDED THIS LINE ---
+// This ensures that whether you are on localhost or Vercel, it uses the correct base
+const API = axios.create({ baseURL: '/api' }); 
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -20,7 +24,8 @@ function App() {
 
   const fetchTasks = async (uid) => {
     try {
-      const res = await axios.get(`http://localhost:5000/tasks/${uid}`);
+      // Changed from localhost to API.get
+      const res = await API.get(`/tasks/${uid}`);
       setTasks(res.data);
     } catch (err) { console.log("Fetch error"); }
   };
@@ -28,7 +33,8 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/login', { email, password });
+      // Changed from localhost to API.post
+      const res = await API.post('/login', { email, password });
       if (res.data.success) {
         localStorage.setItem('userId', res.data.userId);
         setIsLoggedIn(true);
@@ -40,7 +46,7 @@ function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/register', { email, password });
+      const res = await API.post('/register', { email, password });
       if (res.data.success) { alert("Success! Please Login."); setIsRegistering(false); }
     } catch (err) { alert("Signup failed"); }
   };
@@ -49,7 +55,7 @@ function App() {
     e.preventDefault();
     const userId = localStorage.getItem('userId');
     try {
-      await axios.post('http://localhost:5000/add-task', { userId, title: taskTitle, priority });
+      await API.post('/add-task', { userId, title: taskTitle, priority });
       setTaskTitle('');
       fetchTasks(userId);
     } catch (err) { alert("Error adding task"); }
@@ -57,14 +63,14 @@ function App() {
 
   const handleToggleTask = async (taskId) => {
     try {
-      await axios.put(`http://localhost:5000/toggle-task/${taskId}`);
+      await API.put(`/toggle-task/${taskId}`);
       fetchTasks(localStorage.getItem('userId'));
     } catch (err) { alert("Error updating task"); }
   };
 
   const handleDeleteTask = async (taskId) => {
     try {
-      await axios.delete(`http://localhost:5000/delete-task/${taskId}`);
+      await API.delete(`/delete-task/${taskId}`);
       fetchTasks(localStorage.getItem('userId'));
     } catch (err) { alert("Error deleting task"); }
   };
