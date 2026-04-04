@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-// --- ADDED THIS LINE ---
-// This ensures that whether you are on localhost or Vercel, it uses the correct base
-const API = axios.create({ baseURL: '/api' }); 
+// --- 1. CONFIGURATION ---
+// Replace this with your exact URL from Railway's Networking tab
+const API_URL = "https://remote-task-manager-production.up.railway.app";
+
+const API = axios.create({ 
+  baseURL: API_URL 
+}); 
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -14,6 +18,7 @@ function App() {
   const [taskTitle, setTaskTitle] = useState('');
   const [priority, setPriority] = useState('Low');
 
+  // --- 2. AUTH & TASK LOGIC ---
   useEffect(() => {
     const savedUserId = localStorage.getItem('userId');
     if (savedUserId) {
@@ -24,55 +29,69 @@ function App() {
 
   const fetchTasks = async (uid) => {
     try {
-      // Changed from localhost to API.get
       const res = await API.get(`/tasks/${uid}`);
       setTasks(res.data);
-    } catch (err) { console.log("Fetch error"); }
+    } catch (err) { 
+      console.log("Fetch error:", err); 
+    }
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Changed from localhost to API.post
       const res = await API.post('/login', { email, password });
-      if (res.data.success) {
+      if (res.data.success || res.data.userId) {
         localStorage.setItem('userId', res.data.userId);
         setIsLoggedIn(true);
-        fetchTasks(res.data.userId);
+        fetchTasks(res.data.userId || res.data.user._id);
       }
-    } catch (err) { alert("Login failed"); }
+    } catch (err) { 
+      alert("Login failed. Make sure your Railway backend is running!"); 
+    }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
       const res = await API.post('/register', { email, password });
-      if (res.data.success) { alert("Success! Please Login."); setIsRegistering(false); }
-    } catch (err) { alert("Signup failed"); }
+      if (res.data.success) { 
+        alert("Success! Please Login."); 
+        setIsRegistering(false); 
+      }
+    } catch (err) { 
+      alert("Signup failed"); 
+    }
   };
 
   const handleAddTask = async (e) => {
     e.preventDefault();
     const userId = localStorage.getItem('userId');
+    if (!taskTitle.trim()) return;
     try {
       await API.post('/add-task', { userId, title: taskTitle, priority });
       setTaskTitle('');
       fetchTasks(userId);
-    } catch (err) { alert("Error adding task"); }
+    } catch (err) { 
+      alert("Error adding task"); 
+    }
   };
 
   const handleToggleTask = async (taskId) => {
     try {
       await API.put(`/toggle-task/${taskId}`);
       fetchTasks(localStorage.getItem('userId'));
-    } catch (err) { alert("Error updating task"); }
+    } catch (err) { 
+      alert("Error updating task"); 
+    }
   };
 
   const handleDeleteTask = async (taskId) => {
     try {
       await API.delete(`/delete-task/${taskId}`);
       fetchTasks(localStorage.getItem('userId'));
-    } catch (err) { alert("Error deleting task"); }
+    } catch (err) { 
+      alert("Error deleting task"); 
+    }
   };
 
   const handleLogout = () => {
@@ -81,22 +100,30 @@ function App() {
     setTasks([]);
   };
 
+  // --- 3. RENDERING ---
   const renderList = (prio) => (
     <div style={columnStyle}>
-      <h3 style={{ color: prio === 'High' ? 'red' : prio === 'Medium' ? 'orange' : 'green' }}>{prio} Priority</h3>
+      <h3 style={{ 
+        color: prio === 'High' ? '#e74c3c' : prio === 'Medium' ? '#f39c12' : '#27ae60',
+        borderBottom: '2px solid #eee',
+        paddingBottom: '10px'
+      }}>
+        {prio} Priority
+      </h3>
       <ul style={{ listStyle: 'none', padding: 0 }}>
         {tasks.filter(t => t.priority === prio).map(task => (
           <li key={task._id} style={itemStyle}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
               <input 
                 type="checkbox" 
                 checked={task.completed} 
                 onChange={() => handleToggleTask(task._id)} 
-                style={{ marginRight: '10px' }}
+                style={{ marginRight: '10px', cursor: 'pointer' }}
               />
               <span style={{ 
                 textDecoration: task.completed ? 'line-through' : 'none',
-                color: task.completed ? '#888' : '#000'
+                color: task.completed ? '#bdc3c7' : '#2c3e50',
+                fontSize: '16px'
               }}>
                 {task.title}
               </span>
@@ -109,32 +136,42 @@ function App() {
   );
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial', textAlign: 'center' }}>
+    <div style={pageStyle}>
       {!isLoggedIn ? (
         <div style={formBoxStyle}>
-          <h1>{isRegistering ? "Sign Up" : "Login"}</h1>
+          <h1 style={{ color: '#2c3e50' }}>{isRegistering ? "Create Account" : "Welcome Back"}</h1>
           <form onSubmit={isRegistering ? handleRegister : handleLogin}>
             <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} required />
             <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} required />
             <button type="submit" style={mainBtnStyle}>{isRegistering ? "Register" : "Login"}</button>
           </form>
-          <p onClick={() => setIsRegistering(!isRegistering)} style={{ cursor: 'pointer', color: 'blue' }}>
-            {isRegistering ? "Have an account? Login" : "New? Sign up here"}
+          <p onClick={() => setIsRegistering(!isRegistering)} style={toggleLinkStyle}>
+            {isRegistering ? "Already have an account? Login" : "Don't have an account? Sign up"}
           </p>
         </div>
       ) : (
-        <div>
-          <h2>Remote Task Manager <button onClick={handleLogout} style={{ fontSize: '12px' }}>Logout</button></h2>
-          <div style={{ marginBottom: '20px' }}>
-            <input placeholder="New Task" value={taskTitle} onChange={e => setTaskTitle(e.target.value)} style={{ padding: '8px' }} />
-            <select value={priority} onChange={e => setPriority(e.target.value)} style={{ padding: '8px', margin: '0 5px' }}>
+        <div style={dashboardStyle}>
+          <div style={headerStyle}>
+            <h2>Remote Task Manager</h2>
+            <button onClick={handleLogout} style={logoutBtnStyle}>Logout</button>
+          </div>
+          
+          <div style={controlsStyle}>
+            <input 
+              placeholder="What needs to be done?" 
+              value={taskTitle} 
+              onChange={e => setTaskTitle(e.target.value)} 
+              style={taskInputStyle} 
+            />
+            <select value={priority} onChange={e => setPriority(e.target.value)} style={selectStyle}>
               <option value="Low">Low</option>
               <option value="Medium">Medium</option>
               <option value="High">High</option>
             </select>
-            <button onClick={handleAddTask} style={{ padding: '8px' }}>Add</button>
+            <button onClick={handleAddTask} style={addBtnStyle}>Add Task</button>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+
+          <div style={boardStyle}>
             {renderList('High')}
             {renderList('Medium')}
             {renderList('Low')}
@@ -145,12 +182,25 @@ function App() {
   );
 }
 
-// Styling Objects
-const columnStyle = { width: '30%', border: '1px solid #ccc', borderRadius: '8px', padding: '10px', minHeight: '300px', backgroundColor: '#fff' };
-const itemStyle = { display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #eee', alignItems: 'center' };
-const deleteBtnStyle = { background: '#ff4d4d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '5px 8px' };
-const inputStyle = { display: 'block', margin: '10px auto', padding: '10px', width: '200px', borderRadius: '5px', border: '1px solid #ddd' };
-const formBoxStyle = { border: '1px solid #ccc', padding: '30px', display: 'inline-block', borderRadius: '15px', backgroundColor: '#f9f9f9' };
-const mainBtnStyle = { padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '5px', width: '100%' };
+// --- 4. STYLING ---
+const pageStyle = { backgroundColor: '#f0f2f5', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Segoe UI, sans-serif' };
+const formBoxStyle = { backgroundColor: '#fff', padding: '40px', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', textAlign: 'center', width: '350px' };
+const inputStyle = { display: 'block', margin: '15px auto', padding: '12px', width: '100%', borderRadius: '6px', border: '1px solid #ddd', boxSizing: 'border-box' };
+const mainBtnStyle = { padding: '12px', background: '#3498db', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '6px', width: '100%', fontWeight: 'bold' };
+const toggleLinkStyle = { cursor: 'pointer', color: '#3498db', marginTop: '15px', fontSize: '14px' };
+
+const dashboardStyle = { width: '90%', maxWidth: '1000px', backgroundColor: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' };
+const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '10px' };
+const logoutBtnStyle = { background: '#95a5a6', color: 'white', border: 'none', borderRadius: '4px', padding: '5px 12px', cursor: 'pointer' };
+
+const controlsStyle = { marginBottom: '30px', display: 'flex', justifyContent: 'center', gap: '10px' };
+const taskInputStyle = { padding: '12px', width: '300px', borderRadius: '6px', border: '1px solid #ddd' };
+const selectStyle = { padding: '12px', borderRadius: '6px', border: '1px solid #ddd' };
+const addBtnStyle = { padding: '12px 25px', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' };
+
+const boardStyle = { display: 'flex', justifyContent: 'space-between', gap: '20px' };
+const columnStyle = { flex: 1, backgroundColor: '#fdfdfd', border: '1px solid #eee', borderRadius: '10px', padding: '15px', minHeight: '400px' };
+const itemStyle = { display: 'flex', justifyContent: 'space-between', padding: '12px', borderBottom: '1px solid #f9f9f9', alignItems: 'center' };
+const deleteBtnStyle = { background: 'transparent', color: '#e74c3c', border: '1px solid #e74c3c', borderRadius: '4px', cursor: 'pointer', padding: '4px 8px', fontSize: '12px' };
 
 export default App;
