@@ -4,6 +4,8 @@
     "rootDirectory": "backend"
   },
   "deploy": {
-    "startCommand": "node server.js"
+    "startCommand": "node server.js",
+    "healthcheckPath": "/",
+    "restartPolicyType": "ON_FAILURE"
   }
 }
