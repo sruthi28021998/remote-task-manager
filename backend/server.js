@@ -7,10 +7,12 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+// Allowing all origins for easy testing
 app.use(cors());
 
-// MongoDB Connection
-const dbURI = "mongodb+srv://sruthibalabhadruni_db_user:India2026@cluster0.etbh95f.mongodb.net/RemoteTaskManager?retryWrites=true&w=majority";
+// MongoDB Connection 
+// Use the variable name MONGODB_URI to match your updated Railway settings
+const dbURI = process.env.MONGODB_URI || "mongodb+srv://sruthibalabhadruni_db_user:India2026@cluster0.etbh95f.mongodb.net/RemoteTaskManager?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI)
     .then(() => console.log("✅ Connected to MongoDB successfully!"))
@@ -31,6 +33,12 @@ const TaskSchema = new mongoose.Schema({
     completed: { type: Boolean, default: false }
 });
 const Task = mongoose.model('Task', TaskSchema);
+
+// --- Root Route (Crucial for Railway/Health Checks) ---
+// This ensures that clicking your Railway link shows a message instead of a "Site can't be reached" error.
+app.get('/', (req, res) => {
+    res.send("✅ Backend Server is Running and Active!");
+});
 
 // --- Auth Routes ---
 app.post('/register', async (req, res) => {
@@ -72,7 +80,6 @@ app.get('/tasks/:userId', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Update: Toggle Complete Route
 app.put('/toggle-task/:id', async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
@@ -82,7 +89,6 @@ app.put('/toggle-task/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Delete Route
 app.delete('/delete-task/:id', async (req, res) => {
     try {
         await Task.findByIdAndDelete(req.params.id);
@@ -90,11 +96,11 @@ app.delete('/delete-task/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-const PORT = process.env.PORT || 5000;
+// --- Port Configuration ---
+const PORT = process.env.PORT || 8080; // Defaulting to 8080 to match your Railway logs
 
-// Only run app.listen if we are NOT on Vercel
-
-    app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
+});
+
 module.exports = app;
-    })
