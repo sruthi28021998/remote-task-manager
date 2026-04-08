@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // --- 1. CONFIGURATION ---
 // Replace this with your exact URL from Railway's Networking tab
-const API_URL = "https://remote-task-manager-production.up.railway.app";
+const API_URL = "https://remote-task-manager-jfwk.onrender.com/";
 
 const API = axios.create({ 
   baseURL: API_URL 
