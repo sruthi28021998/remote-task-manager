@@ -7,11 +7,9 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-// Allowing all origins for easy testing
 app.use(cors());
 
 // MongoDB Connection 
-// Use the variable name MONGODB_URI to match your updated Railway settings
 const dbURI = process.env.MONGODB_URI || "mongodb+srv://sruthibalabhadruni_db_user:India2026@cluster0.etbh95f.mongodb.net/RemoteTaskManager?retryWrites=true&w=majority";
 
 mongoose.connect(dbURI)
@@ -34,8 +32,7 @@ const TaskSchema = new mongoose.Schema({
 });
 const Task = mongoose.model('Task', TaskSchema);
 
-// --- Root Route (Crucial for Railway/Health Checks) ---
-// This ensures that clicking your Railway link shows a message instead of a "Site can't be reached" error.
+// --- Root Route ---
 app.get('/', (req, res) => {
     res.send("✅ Backend Server is Running and Active!");
 });
@@ -96,8 +93,24 @@ app.delete('/delete-task/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// --- NEW UPDATION: CLEAR COMPLETED ROUTE ---
+app.delete('/clear-completed/:userId', async (req, res) => {
+    try {
+        const result = await Task.deleteMany({ 
+            userId: req.params.userId, 
+            completed: true 
+        });
+        res.json({ 
+            success: true, 
+            message: `${result.deletedCount} tasks cleared!` 
+        });
+    } catch (err) { 
+        res.status(500).json({ success: false, message: err.message }); 
+    }
+});
+
 // --- Port Configuration ---
-const PORT = process.env.PORT || 8080; // Defaulting to 8080 to match your Railway logs
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);

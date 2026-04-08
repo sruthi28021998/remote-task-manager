@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 // --- 1. CONFIGURATION ---
-// Replace this with your exact URL from Railway's Networking tab
-const API_URL = "https://remote-task-manager-jfwk.onrender.com/";
+const API_URL = "https://remote-task-manager-jfwk.onrender.com";
 
 const API = axios.create({ 
   baseURL: API_URL 
@@ -41,12 +40,13 @@ function App() {
     try {
       const res = await API.post('/login', { email, password });
       if (res.data.success || res.data.userId) {
-        localStorage.setItem('userId', res.data.userId);
+        const uid = res.data.userId || res.data.user._id;
+        localStorage.setItem('userId', uid);
         setIsLoggedIn(true);
-        fetchTasks(res.data.userId || res.data.user._id);
+        fetchTasks(uid);
       }
     } catch (err) { 
-      alert("Login failed. Make sure your Railway backend is running!"); 
+      alert("Login failed. Check if your Render backend is live!"); 
     }
   };
 
@@ -91,6 +91,23 @@ function App() {
       fetchTasks(localStorage.getItem('userId'));
     } catch (err) { 
       alert("Error deleting task"); 
+    }
+  };
+
+  // --- NEW: CLEAR COMPLETED LOGIC ---
+  const handleClearCompleted = async () => {
+    const userId = localStorage.getItem('userId');
+    if (!userId) return;
+
+    if (window.confirm("Remove all completed tasks?")) {
+      try {
+        const res = await API.delete(`/clear-completed/${userId}`);
+        if (res.data.success) {
+          fetchTasks(userId);
+        }
+      } catch (err) {
+        alert("Error clearing tasks");
+      }
     }
   };
 
@@ -153,7 +170,10 @@ function App() {
         <div style={dashboardStyle}>
           <div style={headerStyle}>
             <h2>Remote Task Manager</h2>
-            <button onClick={handleLogout} style={logoutBtnStyle}>Logout</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleClearCompleted} style={clearBtnStyle}>Clear Completed</button>
+              <button onClick={handleLogout} style={logoutBtnStyle}>Logout</button>
+            </div>
           </div>
           
           <div style={controlsStyle}>
@@ -191,7 +211,8 @@ const toggleLinkStyle = { cursor: 'pointer', color: '#3498db', marginTop: '15px'
 
 const dashboardStyle = { width: '90%', maxWidth: '1000px', backgroundColor: '#fff', padding: '30px', borderRadius: '15px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' };
 const headerStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '1px solid #eee', paddingBottom: '10px' };
-const logoutBtnStyle = { background: '#95a5a6', color: 'white', border: 'none', borderRadius: '4px', padding: '5px 12px', cursor: 'pointer' };
+const logoutBtnStyle = { background: '#95a5a6', color: 'white', border: 'none', borderRadius: '4px', padding: '8px 15px', cursor: 'pointer' };
+const clearBtnStyle = { background: '#e67e22', color: 'white', border: 'none', borderRadius: '4px', padding: '8px 15px', cursor: 'pointer', fontWeight: 'bold' };
 
 const controlsStyle = { marginBottom: '30px', display: 'flex', justifyContent: 'center', gap: '10px' };
 const taskInputStyle = { padding: '12px', width: '300px', borderRadius: '6px', border: '1px solid #ddd' };
